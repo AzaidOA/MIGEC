@@ -20,7 +20,11 @@ option.list <- list(
   make_option(opt_str='--bcl2fastqReports', type='character', default=NULL, dest='bcl2fastq.reports.dir', help='Absolute path to the directory with the reports of bcl2fastq.'),
   make_option(opt_str='--BarcodesSheet', type='character', default=NULL, dest='barcodes.file', help='Absolute path to sheet with the master and slave barcodes.'),
   make_option(opt_str='--TimeLimit', type='integer', default=120, dest='time.limit', help='Maximum minutes to allow the pipeline to aggregate all the fastq files.'),
-  make_option(opt_str='--TimeLimitMIGEC', type='integer', default=300, dest='migec.time.limit')
+  make_option(opt_str='--TimeLimitMIGEC', type='integer', default=300, dest='migec.time.limit'),
+  make_option(opt_str='--Species', type='character', default='HomoSapiens', dest='def.specie', help='Default species to be used for all samples, \'HomoSapiens\' and \'MusMusculus\' available.'),
+  make_option(opt_str='--FileType', type='character', default='paired', dest='def.file.type', help='File type to be processed for all the samples, \'paired\', \'overlapped\' and \'single\' available.'),
+  make_option(opt_str='--Mask', type='character', default='1:1', dest='def.mask', help='Mask which specifies for which reads in paired-end data to perform the CDR3 extraction. R1=
+  \'1:0\', R2=\'0:1\', Both=\'1:1\', and ')
 )
 
 
@@ -35,6 +39,10 @@ if(interactive()){
   bcl2fastq.reports.dir <- '/mnt/bioadhoc-temp/Groups/vd-vijay/moarias/sequencing_data/04-17-2023/mkfastq/NV103/outs/fastq_path/BulkTCR016'
   time.limit <- 120
   barcodes.file <- NULL
+  # def.specie <- "HomoSapiens"
+  # def.file.type <- "paired"
+  def.mask <- "1:1"
+  def.quality <- "25,30"
 
   # Bulk_TCR008
   seq.date <- '04-05-2022'
@@ -98,10 +106,6 @@ sapply(X=data.dirs,FUN=dir.create)
 # Getting fastq files.
 fastq.files <- list.files(path=bcl2fastq.reports.dir, recursive=T, full.names=T)
 
-# RIN
-# if(!dir.exists(paste0(migec.scripts.dir,'/',project.id)))
-#   dir.create(paste0(migec.scripts.dir,'/',project.id))
-
 aggregate.fastq.file <- paste0(migec.scripts.dir,'/',project.id,'_aggregate_fastqs.sh')
 aggregate.fastq.flag.file <- paste0(migec.scripts.dir,'/aggregate_fastq_files_done.txt')
 aggregate.fastq <- c()
@@ -150,11 +154,6 @@ barcodes.files.list[,':='(
   master.sequence=paste0(master.sequence,'tNNNNtNNNNtNNNNtct'),
   slave.sequence=paste0("NNNN",slave.sequence))]
 
-#RIN
-# barcodes.files.list[chain.tag %chin% "TRB",':='(master.sequence=paste0(master.sequence,master.extension),
-#                                          slave.sequence=paste0("NNNN",slave.sequence,trb.slave.extension))]
-# barcodes.files.list[,chain.tag:=NULL]
-
 colnames(barcodes.files.list) <- c("library.id","SAMPLE ID", "Master barcode sequence", "Slave barcode sequence")
 barcodes.files.list <- split(x=barcodes.files.list, by="library.id", keep.by=F)
 
@@ -166,10 +165,11 @@ for(tmp.lib in migec.libraries){
 
 ### ----------------------- Creating metadata files ----------------------- ###
 migec.sample.sheet <- fread(file=migec.sample.sheet.file)
-def.specie <- "HomoSapiens"
-def.file.type <- "paired"
-def.mask <- "1:1"
-def.quality <- "25,30"
+# RIN
+# def.specie <- "HomoSapiens"
+# def.file.type <- "paired"
+# def.mask <- "1:1"
+# def.quality <- "25,30"
 
 #metadata.files.list <- migec.sample.sheet[,.(sample.id,def.specie,chain,def.file.type,def.mask,def.quality),
 #                                          by="pool"]
@@ -312,10 +312,7 @@ summary.dir <- paste0(summary.dir,'/',project.id)
 if(!dir.exists(summary.dir)) dir.create(summary.dir)
 summary.file <- paste0(summary.dir,"/summary_per_sample.csv")
 
-
 migec.sample.sheet <- fread(file=migec.sample.sheet.file, drop=c("master.id","slave.id"))
-
-# raw.outs <- c("/mnt/bioadhoc-temp/Groups/vd-vijay/moarias/sequencing_data/09-14-2022/mkfastq/NV088/outs/fastq_path/Reports/html/HVCCKDRXX/AnKu019")
 
 migec.sample.sheet[,':='(without.reads = 0, without.umis = 0,
                    migec.first.reads = 0, migec.first.umis = 0, own.first.reads = 0, own.first.umis = 0,
@@ -324,7 +321,6 @@ migec.sample.sheet[,':='(without.reads = 0, without.umis = 0,
                    second.clonotypes = 0, second.mean.clone.size = 0)]
 
 out.directories <- list.dirs(migec.outs.dir, full.names = T, recursive = F)
-#out.directories <- out.directories[basename(out.directories) %like% "B"]
 
 for (tmp.dir in out.directories) {
  ## cdrblast.summary: The metrics of the first filter step that I created from the clonotype tables
@@ -355,24 +351,4 @@ for (tmp.dir in out.directories) {
   }
 }
 
-#RIN
-# bcl2fastq.dirs <- list.dirs(bcl2fastq.reports.dir, recursive = F)
-# bcl2fastq.dirs <- bcl2fastq.dirs[!basename(bcl2fastq.dirs) %chin% "all"]
-# #raw.dirs <- raw.dirs[-length(raw.dirs)]
-# library.table <- data.table()
-# for (tmp.dir in bcl2fastq.dirs) {
-#   html.file <- paste0(tmp.dir, "/all/lane.html")
-#   html.file <- readLines(html.file)[c(40,51)]
-#   tmp.library.reads <- sum(as.numeric(str_remove_all(html.file,"<td>|</td>|,")))
-#   tmp.library.id <- basename(tmp.dir)
-#   library.table <- rbind(library.table,
-#     cbind(library.reads = tmp.library.reads,
-#     library.id = tmp.library.id)
-#   )
-# }
-#
-# migec.sample.sheet <- merge(
-#   x=migec.sample.sheet,
-#   y=library.table,
-#   by="library.id")
 fwrite(x = migec.sample.sheet, file = summary.file)
