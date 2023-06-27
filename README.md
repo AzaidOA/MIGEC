@@ -7,7 +7,7 @@ MIGEC was [published](https://www.nature.com/articles/nmeth.2960) and maintained
 The MIGEC tool is designed to process molecular barcoding data, correct errors, and generate a consensus sequence for each unique molecular identifier. It is widely used in the field of single-cell sequencing and immune repertoire analysis. MIGEC helps improve the accuracy of downstream analyses by addressing the challenges posed by errors introduced during sequencing and PCR amplification.
 
 For more information on MIGEC, refer to the following resources:
-- [MIGEC Paper](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4359820/)
+- [MIGEC Paper](https://www.nature.com/articles/nmeth.2960)
 - [MIGEC GitHub Repository](https://github.com/mikessh/migec)
 
 ## Requirements
