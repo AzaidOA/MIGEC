@@ -1,6 +1,6 @@
 # MIGEC
 In-house developed pipeline for bulk TCR data preprocessing based on the Molecular Identifier-Guided Error Correction (MIGEC) tool.<br/>
-MIGEC was [published](https://www.nature.com/articles/nmeth.2960) and maintained by [Dr. Mikhail Shugay](https://github.com/mikessh). Our in-house pipeline was intended to help process the data from hundreds or even couples of thousands of bulk TCR libraries in an efficient manner.
+MIGEC was published and maintained by [Dr. Mikhail Shugay](https://github.com/mikessh). Our in-house pipeline was intended to help process the data from hundreds or even couples of thousands of bulk TCR libraries in an efficient manner.
 
 ## Introduction
 
@@ -46,16 +46,16 @@ To set up the MIGEC pipeline, follow these steps:
 
  4. Run the run_migec.R script with the provided command-line arguments. Adjust the arguments according to your setup and requirements.
 
---ReportsDir: Absolute path to the directory to save reports.
---ProjectID: Name of the project to run.
---bcl2fastqSheet: Absolute path to the sample sheet used to run bcl2fastq.
---bcl2fastqReports: Absolute path to the directory with the reports of bcl2fastq.
---BarcodesSheet: Absolute path to the sheet with the master and slave barcodes.
---TimeLimit: Maximum minutes to allow the pipeline to aggregate all the fastq files.
---TimeLimitMIGEC: Maximum minutes to allow the MIGEC tool to run.
---Species: Default species to be used for all samples. Options: 'HomoSapiens', 'MusMusculus'.
---FileType: File type to be processed for all the samples. Options: 'paired', 'overlapped', 'single'.
---Mask: Mask which specifies for which reads in paired-end data to perform the CDR3 extraction. R1='1:0', R2='0:1', Both='1:1'.
+--ReportsDir: Absolute path to the directory to save reports.<br/>
+--ProjectID: Name of the project to run.<br/>
+--bcl2fastqSheet: Absolute path to the sample sheet used to run bcl2fastq.<br/>
+--bcl2fastqReports: Absolute path to the directory with the reports of bcl2fastq.<br/>
+--BarcodesSheet: Absolute path to the sheet with the master and slave barcodes.<br/>
+--TimeLimit: Maximum minutes to allow the pipeline to aggregate all the fastq files.<br/>
+--TimeLimitMIGEC: Maximum minutes to allow the MIGEC tool to run.<br/>
+--Species: Default species to be used for all samples. Options: 'HomoSapiens', 'MusMusculus'.<br/>
+--FileType: File type to be processed for all the samples. Options: 'paired', 'overlapped', 'single'.<br/>
+--Mask: Mask which specifies for which reads in paired-end data to perform the CDR3 extraction. R1='1:0', R2='0:1', Both='1:1'.<br/>
 
 Rscript run_migec.R --ReportsDir /path/to/reports --ProjectID my_project --bcl2fastqSheet /path/to/sample_sheet.csv --bcl2fastqReports /path/to/bcl2fastq_reports --BarcodesSheet /path/to/barcodes_sheet.csv --TimeLimit 120 --TimeLimitMIGEC 300 --Species HomoSapiens --FileType paired --Mask 1:1
 
