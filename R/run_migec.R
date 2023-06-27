@@ -19,12 +19,13 @@ option.list <- list(
   make_option(opt_str='--bcl2fastqSheet', type='character', default=NULL, dest='bcl2fastq.sample.sheet.file', help='Absolute path to sample sheet used to run bcl2fastq.'),
   make_option(opt_str='--bcl2fastqReports', type='character', default=NULL, dest='bcl2fastq.reports.dir', help='Absolute path to the directory with the reports of bcl2fastq.'),
   make_option(opt_str='--BarcodesSheet', type='character', default=NULL, dest='barcodes.file', help='Absolute path to sheet with the master and slave barcodes.'),
+  make_option(opt_str='--SampleSheet', type='character', default=NULL, dest='migec.sample.sheet.file', help='Absolute path to the sheet with the data related to each sample. Needed columns: \'sample.id\', \'library.id\', \'donor.id.tag\', \'chain.tag\', \'master.id\', \'slave.id\'.'),
   make_option(opt_str='--TimeLimit', type='integer', default=120, dest='time.limit', help='Maximum minutes to allow the pipeline to aggregate all the fastq files.'),
-  make_option(opt_str='--TimeLimitMIGEC', type='integer', default=300, dest='migec.time.limit'),
+  make_option(opt_str='--TimeLimitMIGEC', type='integer', default=300, dest='migec.time.limit', help='Time limit (in minutes) for MIGEC to run.'),
   make_option(opt_str='--Species', type='character', default='HomoSapiens', dest='def.specie', help='Default species to be used for all samples, \'HomoSapiens\' and \'MusMusculus\' available.'),
   make_option(opt_str='--FileType', type='character', default='paired', dest='def.file.type', help='File type to be processed for all the samples, \'paired\', \'overlapped\' and \'single\' available.'),
-  make_option(opt_str='--Mask', type='character', default='1:1', dest='def.mask', help='Mask which specifies for which reads in paired-end data to perform the CDR3 extraction. R1=
-  \'1:0\', R2=\'0:1\', Both=\'1:1\', and ')
+  make_option(opt_str='--Mask', type='character', default='1:1', dest='def.mask', help='Mask which specifies for which reads in paired-end data to perform the CDR3 extraction. R1=\'1:0\', R2=\'0:1\', Both=\'1:1\', and Only Overlapped reads=\'0:0\''),
+  make_option(opt_str='--Quality', type='character', default='25,30', dest='def.quality', help='Quality threshold pair, in comma-separated format (i.e. \'25,30\'), default for all samples. First threshold in pair is used for raw sequence quality (sequencing quality phred) and the second one is used for assembled sequence quality (CQS score, the fraction of reads in MIG that contain dominant letter at a given position).')
 )
 
 
@@ -34,13 +35,14 @@ if(interactive()){
   # seq.date <- '04-17-2023'
   # run.id <- 'NV103'
   project.id <- 'BulkTCR016'
-  migec.work.dir <- '/mnt/bioadhoc-temp/Groups/vd-vijay/moarias/COVID-19/paper_developments/COVID-Vaccine-Assesment-Upper-Track/MIGEC'
+  migec.work.dir <- '/mnt/bioadhoc-temp/Groups/vd-vijay/moarias/trial/MIGEC'
   bcl2fastq.sample.sheet.file <- '/mnt/bioadhoc-temp/Groups/vd-vijay/moarias/sequencing_data/04-17-2023/mkfastq/data/experiment_layout/NV103_sample_sheet_for_mkfastq.csv'
   bcl2fastq.reports.dir <- '/mnt/bioadhoc-temp/Groups/vd-vijay/moarias/sequencing_data/04-17-2023/mkfastq/NV103/outs/fastq_path/BulkTCR016'
+  barcodes.file <- '/mnt/bioadhoc-temp/Groups/vd-vijay/moarias/COVID-19/paper_developments/COVID-Vaccine-Assesment-Upper-Track/MIGEC/metadata/BulkTCR016_barcodes_sheet_migec.csv'
+  migec.sample.sheet.file <- '/mnt/bioadhoc-temp/Groups/vd-vijay/moarias/COVID-19/paper_developments/COVID-Vaccine-Assesment-Upper-Track/MIGEC/metadata/BulkTCR016_sample_sheet_migec.csv'
   time.limit <- 120
-  barcodes.file <- NULL
-  # def.specie <- "HomoSapiens"
-  # def.file.type <- "paired"
+  def.specie <- "HomoSapiens"
+  def.file.type <- "paired"
   def.mask <- "1:1"
   def.quality <- "25,30"
 
@@ -72,7 +74,8 @@ if(!file.exists(barcodes.file))
   stop('Barcodes sheet for MIGEC was not found.\n')
 
 # ---> Metadata sheet.
-migec.sample.sheet.file <- paste0(migec.work.dir,'/metadata/',project.id,'_sample_sheet_migec.csv')
+if(is.null(migec.sample.sheet.file))
+  migec.sample.sheet.file <- paste0(migec.work.dir,'/metadata/',project.id,'_sample_sheet_migec.csv')
 if(!file.exists(migec.sample.sheet.file))
   stop('Sample sheet for MIGEC was not found.\n')
 
