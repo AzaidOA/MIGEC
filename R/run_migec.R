@@ -20,8 +20,8 @@ option.list <- list(
   make_option(opt_str='--bcl2fastqReports', type='character', default=NULL, dest='bcl2fastq.reports.dir', help='Absolute path to the directory with the reports of bcl2fastq.'),
   make_option(opt_str='--BarcodesSheet', type='character', default=NULL, dest='barcodes.file', help='Absolute path to sheet with the master and slave barcodes.'),
   make_option(opt_str='--SampleSheet', type='character', default=NULL, dest='migec.sample.sheet.file', help='Absolute path to the sheet with the data related to each sample. Needed columns: \'sample.id\', \'library.id\', \'donor.id.tag\', \'chain.tag\', \'master.id\', \'slave.id\'.'),
-  make_option(opt_str='--TimeLimit', type='integer', default=120, dest='time.limit', help='Maximum minutes to allow the pipeline to aggregate all the fastq files.'),
-  make_option(opt_str='--TimeLimitMIGEC', type='integer', default=300, dest='migec.time.limit', help='Time limit (in minutes) for MIGEC to run.'),
+  make_option(opt_str='--TimeLimit', type='integer', default=300, dest='time.limit', help='Maximum minutes to allow MIGEC to run.'),
+  # make_option(opt_str='--TimeLimitMIGEC', type='integer', default=300, dest='migec.time.limit', help='Time limit (in minutes) for MIGEC to run.'),
   make_option(opt_str='--Species', type='character', default='HomoSapiens', dest='def.specie', help='Default species to be used for all samples, \'HomoSapiens\' and \'MusMusculus\' available.'),
   make_option(opt_str='--FileType', type='character', default='paired', dest='def.file.type', help='File type to be processed for all the samples, \'paired\', \'overlapped\' and \'single\' available.'),
   make_option(opt_str='--Mask', type='character', default='1:1', dest='def.mask', help='Mask which specifies for which reads in paired-end data to perform the CDR3 extraction. R1=\'1:0\', R2=\'0:1\', Both=\'1:1\', and Only Overlapped reads=\'0:0\''),
@@ -40,7 +40,7 @@ if(interactive()){
   bcl2fastq.reports.dir <- '/mnt/bioadhoc-temp/Groups/vd-vijay/moarias/sequencing_data/04-17-2023/mkfastq/NV103/outs/fastq_path/BulkTCR016'
   barcodes.file <- '/mnt/bioadhoc-temp/Groups/vd-vijay/moarias/COVID-19/paper_developments/COVID-Vaccine-Assesment-Upper-Track/MIGEC/metadata/BulkTCR016_barcodes_sheet_migec.csv'
   migec.sample.sheet.file <- '/mnt/bioadhoc-temp/Groups/vd-vijay/moarias/COVID-19/paper_developments/COVID-Vaccine-Assesment-Upper-Track/MIGEC/metadata/BulkTCR016_sample_sheet_migec.csv'
-  time.limit <- 120
+  time.limit <- 300
   def.specie <- "HomoSapiens"
   def.file.type <- "paired"
   def.mask <- "1:1"
@@ -98,13 +98,15 @@ migec.outs.dir <- paste0(migec.outs.dir,'/',project.id)
 if(!dir.exists(migec.outs.dir)) dir.create(migec.outs.dir)
 
 ### ------------------- Joining the fastqs of each Read ------------------- ###
+cat('### -------------------- Agreggating fastq files -------------------- ###\n')
 bcl2fastq.sample.sheet <- fread(bcl2fastq.sample.sheet.file,skip=1)
 # Getting library names.
 libraries <- bcl2fastq.sample.sheet[Sample_Project == project.id,unique(Original_Sample_ID)]
 
 # Creating one directory per library.
 data.dirs <- paste0(migec.data.dir,'/',libraries)
-sapply(X=data.dirs,FUN=dir.create)
+invisible(sapply(X=data.dirs,FUN=dir.create))
+cat('Data directories were created...\n\n')
 
 # Getting fastq files.
 fastq.files <- list.files(path=bcl2fastq.reports.dir, recursive=T, full.names=T)
@@ -125,24 +127,27 @@ for(tmp.library in libraries){
 # It has to exist project directory, and inside all its respective fastq files
 # aggregate.fastq <- c(paste0('cat ',bcl2fastq.outs.dir,'/',libraries,'*R1* > ',migec.data.dir,'/',project.id,'/',libraries,'/',libraries,'_R1.fastq.gz'),
 #   paste0('cat ',bcl2fastq.outs.dir,'/',libraries,'*R2* > ',migec.data.dir,'/',project.id,'/',libraries,'/',libraries,'_R2.fastq.gz'))
-
-aggregate.fastq <- c(aggregate.fastq,
-  paste0('echo \'FASTQ files are ready. This file has to be automatically removed\' > ',
-    aggregate.fastq.flag.file))
+# RIN
+# aggregate.fastq <- c(aggregate.fastq,
+#   paste0('echo \'FASTQ files are ready. This file has to be automatically removed\' > ',
+#     aggregate.fastq.flag.file))
 # RIN
 # batch <- project.id
 write(x=aggregate.fastq, file=aggregate.fastq.file)
 system(command=paste0('bash ', aggregate.fastq.file))
-time.count <- 0
-while(!file.exists(aggregate.fastq.flag.file)){
-  time.count <- time.count + 1
-  if(time.count > time.limit){
-    stop('The FASTQ files were not aggregated in the allocated time.')
-  }
-  Sys.sleep(time=60)
-}
-system(command=paste0('rm ', aggregate.fastq.flag.file))
+cat('FASTQ file were agreggated succesfully...\n')
+# RIN
+# time.count <- 0
+# while(!file.exists(aggregate.fastq.flag.file)){
+#   time.count <- time.count + 1
+#   if(time.count > time.limit){
+#     stop('The FASTQ files were not aggregated in the allocated time.')
+#   }
+#   Sys.sleep(time=60)
+# }
+# system(command=paste0('rm ', aggregate.fastq.flag.file))
 ### ----------------------- Creating barcodes files ----------------------- ###
+cat('### ----------------------- Creating barcodes files ----------------------- ###\n')
 migec.sample.sheet <- fread(file=migec.sample.sheet.file)
 #barcodes.files.list <- migec.sample.sheet[,.(sample.id,master.sequence,slave.sequence), by="pool"]
 barcodes.data <- fread(barcodes.file)
@@ -166,16 +171,12 @@ for(tmp.lib in migec.libraries){
   fwrite(x=barcodes.files.list[[tmp.lib]], file=tmp.file, sep="\t")
 }
 
-### ----------------------- Creating metadata files ----------------------- ###
-migec.sample.sheet <- fread(file=migec.sample.sheet.file)
-# RIN
-# def.specie <- "HomoSapiens"
-# def.file.type <- "paired"
-# def.mask <- "1:1"
-# def.quality <- "25,30"
+cat('Barcodes files were created succesfully...\n')
 
-#metadata.files.list <- migec.sample.sheet[,.(sample.id,def.specie,chain,def.file.type,def.mask,def.quality),
-#                                          by="pool"]
+### ----------------------- Creating metadata files ----------------------- ###
+cat('### ----------------------- Creating metadata files ----------------------- ###\n')
+migec.sample.sheet <- fread(file=migec.sample.sheet.file)
+
 metadata.files.list <- migec.sample.sheet[,.(
   library.id,sample.id,def.specie,chain.tag,def.file.type,def.mask,def.quality)]
 colnames(metadata.files.list) <- c("library.id","Sample ID","Species","Gene","File types","Mask","Quality threshold pair")
@@ -189,6 +190,7 @@ for(tmp.lib in migec.libraries){
 
 
 ### -------------------------- Creating job files -------------------------- ###
+cat('### -------------------------- Creating job files -------------------------- ###')
 # project.data.dir <- paste0(migec.data.dir,'/',project.id)
 migec.libraries <- list.files(path=migec.data.dir, recursive=F)
 #migec.libraries <- migec.libraries[migec.libraries %like% "A"]
@@ -199,14 +201,13 @@ run.migec <- c()
 for(tmp.lib in migec.libraries){
   SBATCH <- paste0("#!/bin/sh
 #SBATCH --job-name=MIGEC-",tmp.lib,"
-#SBATCH --time=12:00:00
+#SBATCH --time=",time.limit/60,":00:00
 #SBATCH --output=", paste0(migec.data.dir,"/",tmp.lib,"/MIGEC.out\n"),
 "#SBATCH --mem=100GB
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 WORK_DIR=\"",migec.outs.dir,"\"
-DATA_DIR=\"",migec.data.dir,"\"
 SAMPLE_DIR=\"",paste0(migec.data.dir,"/",tmp.lib), "\"
 MIGEC=\"java -jar /home/moarias/bin/MIGEC/migec-1.2.9.jar\"
 
@@ -244,7 +245,21 @@ run.migec <- paste("sbatch", run.migec)
 write(x=run.migec,file=paste0(migec.scripts.dir,"/run_migec.sh"))
 system(command=paste0('bash ', migec.scripts.dir,"/run_migec.sh"))
 
+cmd.files <- paste0(migec.outs.dir,'/',migec.libraries,'/filter/cdrblastfilter.cmd.txt')
+migec.done <- all(file.exists(cmd.files))
+time.count <- 0
+while(!migec.done){
+  time.count <- time.count + 1
+  migec.done <- all(file.exists(cmd.files))
+  if(time.count > time.limit){
+    stop('MIGEC did not run in the allocated time. Check for any incompleted library.\n')
+  }
+  Sys.sleep(time=60)
+}
+cat('MIGEC ran succesfully!\n')
+
 ### -------------------------- Creating summaries -------------------------- ###
+cat('### -------------------------- Creating summaries -------------------------- ###\n')
 library.dirs <- list.dirs(migec.outs.dir, full.names = T, recursive = F)
 #pool.dirs <- pool.dirs[basename(pool.dirs) %like% 'A']
 
@@ -307,7 +322,7 @@ for (tmp.dir in library.dirs){
   fwrite(x = library.summary, file = paste0(tmp.dir, "/filter/library.filter.summary.txt"), sep = "\t")
 }
 
-################################# Creating QCs #################################
+# ---> Creating QCs
 
 summary.dir <- paste0(migec.work.dir,"/summaries")
 if(!dir.exists(summary.dir)) dir.create(summary.dir)
@@ -317,8 +332,8 @@ summary.file <- paste0(summary.dir,"/summary_per_sample.csv")
 
 migec.sample.sheet <- fread(file=migec.sample.sheet.file, drop=c("master.id","slave.id"))
 
-migec.sample.sheet[,':='(without.reads = 0, without.umis = 0,
-                   migec.first.reads = 0, migec.first.umis = 0, own.first.reads = 0, own.first.umis = 0,
+migec.sample.sheet[,':='(unfiltered.reads = 0, unfiltered.umis = 0,
+                   first.reads = 0, first.umis = 0,
                    first.clonotypes = 0, first.mean.clone.size = 0,
                    second.reads = 0, second.umis = 0,
                    second.clonotypes = 0, second.mean.clone.size = 0)]
@@ -339,12 +354,10 @@ for (tmp.dir in out.directories) {
  library.d <- basename(tmp.dir)
  for (id.r in filter.summary.table$sample.id){
    migec.sample.sheet[sample.id == id.r & library.id == library.d,
-   ':='(without.reads = cdrblast.log.table[sample.id == id.r & data.type == "raw", no.cdrblast.total.reads],
-   without.umis = cdrblast.log.table[sample.id == id.r & data.type == "raw", no.cdrblast.total.umis],
-   migec.first.reads = cdrblast.log.table[sample.id == id.r & data.type =="asm", cdrblast.total.reads],
-   migec.first.umis = cdrblast.log.table[sample.id == id.r & data.type =="asm", cdrblast.total.umis],
-   own.first.reads = cdrblast.summary.table[sample.id == id.r, total.reads],
-   own.first.umis = cdrblast.summary.table[sample.id == id.r, total.umis],
+   ':='(unfiltered.reads = cdrblast.log.table[sample.id == id.r & data.type == "raw", no.cdrblast.total.reads],
+   unfiltered.umis = cdrblast.log.table[sample.id == id.r & data.type == "raw", no.cdrblast.total.umis],
+   first.reads = cdrblast.summary.table[sample.id == id.r, total.reads],
+   first.umis = cdrblast.summary.table[sample.id == id.r, total.umis],
    first.clonotypes = cdrblast.summary.table[sample.id == id.r, total.clonotypes],
    first.mean.clone.size = cdrblast.summary.table[sample.id == id.r, mean.clone.size],
    second.reads = filter.summary.table[sample.id == id.r, total.reads],
