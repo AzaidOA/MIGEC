@@ -7,6 +7,7 @@ cat('############    ------------   MIGEC   -----------    ############\n')
 ### ------------------------------ Libraries ------------------------------ ###
 cat('### ------------------------------ Libraries ------------------------------ ###\n')
 cat('Importing libraries...\n')
+library(optparse)
 library(data.table)
 library(stringr)
 library(plyr)
@@ -57,6 +58,22 @@ if(interactive()){
   tra.slave.extension <- "gggtcagggttctggatat"
 
 }
+
+opt.parser <- OptionParser(option_list=option.list)
+opt <- parse_args(opt.parser)
+
+project.id <- opt$project.id
+migec.work.dir <- opt$migec.work.dir
+bcl2fastq.sample.sheet.file <- opt$bcl2fastq.sample.sheet.file
+bcl2fastq.reports.dir <- opt$bcl2fastq.reports.dir
+barcodes.file <- opt$barcodes.file
+migec.sample.sheet.file <- opt$migec.sample.sheet.file
+time.limit <- opt$time.limit
+def.specie <- opt$def.specie
+def.file.type <- opt$def.file.type
+def.mask <- opt$def.mask
+def.quality <- opt$def.quality
+
 
 # ---> Sample sheet used to run bcl2fastq.
 if(!file.exists(bcl2fastq.sample.sheet.file))
