@@ -21,7 +21,7 @@ option.list <- list(
   make_option(opt_str='--bcl2fastqReports', type='character', default=NULL, dest='bcl2fastq.reports.dir', help='Absolute path to the directory with the reports of bcl2fastq.'),
   make_option(opt_str='--BarcodesSheet', type='character', default=NULL, dest='barcodes.file', help='Absolute path to sheet with the master and slave barcodes.'),
   make_option(opt_str='--SampleSheet', type='character', default=NULL, dest='migec.sample.sheet.file', help='Absolute path to the sheet with the data related to each sample. Needed columns: \'sample.id\', \'library.id\', \'donor.id.tag\', \'chain.tag\', \'master.id\', \'slave.id\'.'),
-  make_option(opt_str='--TimeLimit', type='integer', default=300, dest='time.limit', help='Maximum minutes to allow MIGEC to run.'),
+  make_option(opt_str='--TimeLimit', type='character', default='06:00:00', dest='time.limit', help='Maximum time in format \'06:00:00\' \'hours:minutes:seconds\' to allow MIGEC to run.'),
   # make_option(opt_str='--TimeLimitMIGEC', type='integer', default=300, dest='migec.time.limit', help='Time limit (in minutes) for MIGEC to run.'),
   make_option(opt_str='--Species', type='character', default='HomoSapiens', dest='def.specie', help='Default species to be used for all samples, \'HomoSapiens\' and \'MusMusculus\' available.'),
   make_option(opt_str='--FileType', type='character', default='paired', dest='def.file.type', help='File type to be processed for all the samples, \'paired\', \'overlapped\' and \'single\' available.'),
@@ -41,7 +41,7 @@ if(interactive()){
   bcl2fastq.reports.dir <- '/mnt/bioadhoc-temp/Groups/vd-vijay/moarias/sequencing_data/04-17-2023/mkfastq/NV103/outs/fastq_path/BulkTCR016'
   barcodes.file <- '/mnt/bioadhoc-temp/Groups/vd-vijay/moarias/COVID-19/paper_developments/COVID-Vaccine-Assesment-Upper-Track/MIGEC/metadata/BulkTCR016_barcodes_sheet_migec.csv'
   migec.sample.sheet.file <- '/mnt/bioadhoc-temp/Groups/vd-vijay/moarias/COVID-19/paper_developments/COVID-Vaccine-Assesment-Upper-Track/MIGEC/metadata/BulkTCR016_sample_sheet_migec.csv'
-  time.limit <- 300
+  time.limit <- '06:00:00'
   def.specie <- "HomoSapiens"
   def.file.type <- "paired"
   def.mask <- "1:1"
@@ -218,7 +218,7 @@ run.migec <- c()
 for(tmp.lib in migec.libraries){
   SBATCH <- paste0("#!/bin/sh
 #SBATCH --job-name=MIGEC-",tmp.lib,"
-#SBATCH --time=",time.limit/60,":00:00
+#SBATCH --time=",time.limit,"
 #SBATCH --output=", paste0(migec.data.dir,"/",tmp.lib,"/MIGEC.out\n"),
 "#SBATCH --mem=100GB
 #SBATCH --nodes=1
@@ -264,6 +264,9 @@ system(command=paste0('bash ', migec.scripts.dir,"/run_migec.sh"))
 
 cmd.files <- paste0(migec.outs.dir,'/',migec.libraries,'/filter/cdrblastfilter.cmd.txt')
 migec.done <- all(file.exists(cmd.files))
+time.limit <- str_extract_all(time.limit, "\\d+")[[1]]
+time.limit <- (as.numeric(time.limit[1])*60) + as.numeric(time.limit[2])
+
 time.count <- 0
 while(!migec.done){
   time.count <- time.count + 1
