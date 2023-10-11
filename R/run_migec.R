@@ -1,6 +1,6 @@
 # Main: MIGEC pipeline
 # By: Azaid Ordaz
-# Version: 1.0.0
+# Version: 1.1.0
 
 cat('############    --------   Bulk TCR-seq   -------    ############\n')
 cat('############    ------------   MIGEC   -----------    ############\n')
@@ -22,21 +22,19 @@ option.list <- list(
   make_option(opt_str='--BarcodesSheet', type='character', default=NULL, dest='barcodes.file', help='Absolute path to sheet with the master and slave barcodes.'),
   make_option(opt_str='--SampleSheet', type='character', default=NULL, dest='migec.sample.sheet.file', help='Absolute path to the sheet with the data related to each sample. Needed columns: \'sample.id\', \'library.id\', \'donor.id.tag\', \'chain.tag\', \'master.id\', \'slave.id\'.'),
   make_option(opt_str='--TimeLimit', type='character', default='06:00:00', dest='time.limit', help='Maximum time in format \'06:00:00\' \'hours:minutes:seconds\' to allow MIGEC to run.'),
-  # make_option(opt_str='--TimeLimitMIGEC', type='integer', default=300, dest='migec.time.limit', help='Time limit (in minutes) for MIGEC to run.'),
   make_option(opt_str='--Species', type='character', default='HomoSapiens', dest='def.specie', help='Default species to be used for all samples, \'HomoSapiens\' and \'MusMusculus\' available.'),
   make_option(opt_str='--FileType', type='character', default='paired', dest='def.file.type', help='File type to be processed for all the samples, \'paired\', \'overlapped\' and \'single\' available.'),
   make_option(opt_str='--Mask', type='character', default='1:1', dest='def.mask', help='Mask which specifies for which reads in paired-end data to perform the CDR3 extraction. R1=\'1:0\', R2=\'0:1\', Both=\'1:1\', and Only Overlapped reads=\'0:0\''),
-  make_option(opt_str='--Quality', type='character', default='25,30', dest='def.quality', help='Quality threshold pair, in comma-separated format (i.e. \'25,30\'), default for all samples. First threshold in pair is used for raw sequence quality (sequencing quality phred) and the second one is used for assembled sequence quality (CQS score, the fraction of reads in MIG that contain dominant letter at a given position).')
+  make_option(opt_str='--Quality', type='character', default='25,30', dest='def.quality', help='Quality threshold pair, in comma-separated format (i.e. \'25,30\'), default for all samples. First threshold in pair is used for raw sequence quality (sequencing quality phred) and the second one is used for assembled sequence quality (CQS score, the fraction of reads in MIG that contain dominant letter at a given position).'),
+  make_option(opt_str='--MIGsize', type='integer', default='2', dest='MIG.size', help='Minimum number of reads that each UMI must have.')
+  
 )
 
 
 if(interactive()){
 
-  # BulkTCR016
-  # seq.date <- '04-17-2023'
-  # run.id <- 'NV103'
   project.id <- 'BulkTCR016'
-  migec.work.dir <- '/mnt/bioadhoc-temp/Groups/vd-vijay/moarias/trial/MIGEC'
+  migec.work.dir <- '/mnt/BioAdHoc/Groups/vd-vijay/moarias/trial/MIGEC'
   bcl2fastq.sample.sheet.file <- '/mnt/bioadhoc-temp/Groups/vd-vijay/moarias/sequencing_data/04-17-2023/mkfastq/data/experiment_layout/NV103_sample_sheet_for_mkfastq.csv'
   bcl2fastq.reports.dir <- '/mnt/bioadhoc-temp/Groups/vd-vijay/moarias/sequencing_data/04-17-2023/mkfastq/NV103/outs/fastq_path/BulkTCR016'
   barcodes.file <- '/mnt/bioadhoc-temp/Groups/vd-vijay/moarias/COVID-19/paper_developments/COVID-Vaccine-Assesment-Upper-Track/MIGEC/metadata/BulkTCR016_barcodes_sheet_migec.csv'
@@ -46,16 +44,8 @@ if(interactive()){
   def.file.type <- "paired"
   def.mask <- "1:1"
   def.quality <- "25,30"
+  MIG.size <- 2
 
-  # Bulk_TCR008
-  seq.date <- '04-05-2022'
-  run.id <- 'NV078'
-  project.id <- 'BulkTCR_08-10-11-12'
-  migec.work.dir <- '/mnt/bioadhoc-temp/Groups/vd-vijay/moarias/COVID-19/paper_developments/COVID-Vaccine-Assesment-Upper-Track/MIGEC'
-  time.limit <- 120
-  master.extension <- "cagtggtatcaacgcagagtNNNNtNNNNtNNNNtct"
-  trb.slave.extension <- "acacsttkttcaggtcctc"
-  tra.slave.extension <- "gggtcagggttctggatat"
 
 }
 
@@ -73,6 +63,7 @@ def.specie <- opt$def.specie
 def.file.type <- opt$def.file.type
 def.mask <- opt$def.mask
 def.quality <- opt$def.quality
+MIG.size <- opt$MIG.size
 
 
 # ---> Sample sheet used to run bcl2fastq.
@@ -141,32 +132,14 @@ for(tmp.library in libraries){
     paste0('cat ',r2,' > ',migec.data.dir,'/',tmp.library,'/',tmp.library,'_R2.fastq.gz')
   )
 }
-# It has to exist project directory, and inside all its respective fastq files
-# aggregate.fastq <- c(paste0('cat ',bcl2fastq.outs.dir,'/',libraries,'*R1* > ',migec.data.dir,'/',project.id,'/',libraries,'/',libraries,'_R1.fastq.gz'),
-#   paste0('cat ',bcl2fastq.outs.dir,'/',libraries,'*R2* > ',migec.data.dir,'/',project.id,'/',libraries,'/',libraries,'_R2.fastq.gz'))
-# RIN
-# aggregate.fastq <- c(aggregate.fastq,
-#   paste0('echo \'FASTQ files are ready. This file has to be automatically removed\' > ',
-#     aggregate.fastq.flag.file))
-# RIN
-# batch <- project.id
+
 write(x=aggregate.fastq, file=aggregate.fastq.file)
 system(command=paste0('bash ', aggregate.fastq.file))
 cat('FASTQ file were agreggated succesfully...\n')
-# RIN
-# time.count <- 0
-# while(!file.exists(aggregate.fastq.flag.file)){
-#   time.count <- time.count + 1
-#   if(time.count > time.limit){
-#     stop('The FASTQ files were not aggregated in the allocated time.')
-#   }
-#   Sys.sleep(time=60)
-# }
-# system(command=paste0('rm ', aggregate.fastq.flag.file))
+
 ### ----------------------- Creating barcodes files ----------------------- ###
 cat('### ----------------------- Creating barcodes files ----------------------- ###\n')
 migec.sample.sheet <- fread(file=migec.sample.sheet.file)
-#barcodes.files.list <- migec.sample.sheet[,.(sample.id,master.sequence,slave.sequence), by="pool"]
 barcodes.data <- fread(barcodes.file)
 barcodes.files.list <- migec.sample.sheet[,.(library.id,sample.id,master.id,slave.id)]
 barcodes.files.list[ barcodes.data[type=='master'],
@@ -204,13 +177,12 @@ for(tmp.lib in migec.libraries){
   tmp.file <- paste0(migec.data.dir,'/',tmp.lib,"/metadata_",tmp.lib,".txt")
   fwrite(x=metadata.files.list[[tmp.lib]], file=tmp.file, sep="\t", col.names=F)
 }
+cat('Metadata files were created succesfully...\n')
 
 
 ### -------------------------- Creating job files -------------------------- ###
 cat('### -------------------------- Creating job files -------------------------- ###')
-# project.data.dir <- paste0(migec.data.dir,'/',project.id)
 migec.libraries <- list.files(path=migec.data.dir, recursive=F)
-#migec.libraries <- migec.libraries[migec.libraries %like% "A"]
 SBATCH.dir <- paste0(migec.scripts.dir,"/SBATCH")
 if(!dir.exists(SBATCH.dir)) dir.create(SBATCH.dir)
 
@@ -242,7 +214,7 @@ ${MIGEC} Histogram ${histogram_line}
 #Running assemble
 assembly_line=$(Rscript /home/moarias/scripts/migec_processing/assembly.R \\
 ${WORK_DIR})
-${MIGEC} AssembleBatch --force-overseq 2 --force-collision-filter -c ${assembly_line}
+${MIGEC} AssembleBatch --force-overseq ",MIG.size," --force-collision-filter -c ${assembly_line}
 
 #Running cdrblastbatch
 cdrblast_line=$(Rscript /home/moarias/scripts/migec_processing/cdrblast.R \\
@@ -263,20 +235,113 @@ write(x=run.migec,file=paste0(migec.scripts.dir,"/run_migec.sh"))
 system(command=paste0('bash ', migec.scripts.dir,"/run_migec.sh"))
 
 cmd.files <- paste0(migec.outs.dir,'/',migec.libraries,'/filter/cdrblastfilter.cmd.txt')
+names(cmd.files) <- migec.libraries
+all.out.files <- paste0(migec.data.dir,'/',migec.libraries,'/MIGEC.out')
 migec.done <- all(file.exists(cmd.files))
 time.limit <- str_extract_all(time.limit, "\\d+")[[1]]
 time.limit <- (as.numeric(time.limit[1])*60) + as.numeric(time.limit[2])
 
 time.count <- 0
+errors <- list()
 while(!migec.done){
-  time.count <- time.count + 1
-  migec.done <- all(file.exists(cmd.files))
-  if(time.count > time.limit){
+  # Checking if any errors have arisen...
+  out.files <- list.files(path=migec.data.dir, full.names=T, recursive=T, pattern='MIGEC.out')
+  names(out.files) <- basename(dirname(out.files))
+  # Removing MIGEC.out files that have already been detected as an error...
+  out.files <- out.files[!names(out.files) %chin% names(errors)]
+  new.errors <- lapply(X=out.files,FUN=function(tmp.file){
+    grep.command <- paste("grep", 'ERROR', shQuote(tmp.file), sep=" ")
+    tmp.errors <- system(grep.command, intern=TRUE)
+    if(length(tmp.errors) == 0) return(NA)
+    return(tmp.errors)
+  })
+  new.errors <- new.errors[!is.na(new.errors)]
+  
+  if(length(new.errors) > 0) cmd.files <- cmd.files[!names(cmd.files) %chin% names(new.errors)]
+
+  # Error detection: Division undefined
+  low.umis <- sapply(new.errors,FUN=function(tmp.error){
+    any(tmp.error %chin% '[ERROR] Division undefined, see _migec_error.log for details')
+  })
+  if(length(low.umis) > 0){
+    new.errors <- new.errors[!low.umis]
+    low.umis <- names(low.umis[low.umis])
+    for(tmp.lib in low.umis){
+      # Detecting which samples were affected
+      assemble.file <- paste0(migec.outs.dir,'/',tmp.lib, '/assembly/assemble.log.txt')
+      assemble <- fread(assemble.file, select=c('#SAMPLE_ID','MIGS_GOOD_TOTAL'))
+      samples.to.remove <- as.character(unlist(assemble[MIGS_GOOD_TOTAL == 0, '#SAMPLE_ID']))
+
+      # Removing samples from metadata and barcode files
+      barcode.file <- paste0(migec.data.dir,'/',tmp.lib,'/barcodes_',tmp.lib,'.txt')
+      barcodes <- fread(barcode.file, colClasses='character')
+      barcodes <- barcodes[!`SAMPLE ID` %chin% samples.to.remove]
+      fwrite(x=barcodes, file=barcode.file, sep="\t")
+
+      metadata.file <- paste0(migec.data.dir,'/',tmp.lib,'/metadata_',tmp.lib,'.txt')
+      metadata <- fread(metadata.file, colClasses='character')
+      metadata <- metadata[!V1 %chin% samples.to.remove]
+      fwrite(x=metadata, file=metadata.file, col.names=F, sep="\t")
+
+      # Creatig log file
+      samples.to.remove <- paste(samples.to.remove, collapse=' ')
+      log.message <- paste0('The following samples were eliminated because they did not reach the requested MIG size ', MIG.size,': ',samples.to.remove)
+      log.file <- paste0(migec.data.dir,'/',tmp.lib,'/removed_samples.log.txt')
+      write(x=log.message, file=log.file)
+
+      # Remiving MIGEC.out and _migec_error.log files
+      files.to.remove <- c(
+        paste0(migec.data.dir,'/',tmp.lib,'/MIGEC.out'), 
+        paste0(migec.data.dir,'/',tmp.lib,'/_migec_error.log')
+      )
+      invisible(file.remove(files.to.remove))
+
+      # Keeping histogram log.
+      histogram.dir <- paste0(migec.outs.dir,'/',tmp.lib, '/histogram')
+      histogram.dir.log <- paste0(migec.outs.dir,'/',tmp.lib, '/log_histogram')
+      invisible(file.rename(histogram.dir, histogram.dir.log))
+
+      # Removing all the other directories.
+      dirs.to.remove <- list.dirs(path=paste0(migec.outs.dir,'/',tmp.lib), recursive=F)
+      dirs.to.remove <- dirs.to.remove[basename(dirs.to.remove) != 'log_histogram']
+      invisible(unlink(dirs.to.remove, recursive=T))
+
+      # Re-runing job.
+      sbatch.line <- paste0('sbatch ', SBATCH.dir, '/SBATCH_', tmp.lib,'.sh')
+      system(command=sbatch.line)
+
+      cat(paste0('The samples from the ',tmp.lib,' library that did not reach the defined MIG size ',MIG.size,' have been eliminated and the job has been run again.\n'))
+    }
+    time.count <- 0
+  }
+  
+  errors <- append(errors, new.errors)
+  time.start <- all(file.exists(all.out.files))
+  if(time.start){
+    if(time.count > time.limit){
     stop('MIGEC did not run in the allocated time. Check for any incompleted library.\n')
+    }
+  time.count <- time.count + 1
   }
   Sys.sleep(time=60)
+  migec.done <- all(file.exists(cmd.files))
 }
-cat('MIGEC ran succesfully!\n')
+if(length(errors) > 0){
+  project.error.file <- paste0(migec.data.dir,'/project_error.log.txt')
+  errors <- lapply(errors, paste, collapse='\n')
+  log.conn <- file(project.error.file, "w")
+  for(i in 1:length(errors)){
+    cat(paste0(names(errors)[i],'\n'), file=log.conn)
+    cat(paste0(errors[[i]],'\n\n'), file=log.conn)
+  }
+  close(log.conn)
+  cat('The following libraries had errors while running, check the specific errors they got in project_error.log.txt file:\n')
+  cat(paste(names(errors),collapse='\n'))
+  cat('\nBut the other libraries have run successfully!\n')
+} else {
+  cat('MIGEC ran succesfully!\n')
+}
+ 
 
 ### -------------------------- Creating summaries -------------------------- ###
 cat('### -------------------------- Creating summaries -------------------------- ###\n')
